@@ -1,0 +1,29 @@
+button {
+    outline: none;
+    border: none;
+  }
+
+.popup-container {
+  display: flex-column;
+  justify-content: center;
+  align-items: center;
+  margin: 16px;
+}
+
+.popup-text {
+  text-align: center;
+  border-style: solid;
+  border-color: #D3D3D3;
+  border-width: 0 0 2px 0;
+  padding-bottom: 8px;
+}
+
+.action-button {
+  padding: 16px;
+  box-shadow: 3px 3px 5px grey;
+}
+
+.button-text {
+  font-weight: 700;
+  font-size: 14px;
+}
