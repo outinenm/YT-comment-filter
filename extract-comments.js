@@ -106,11 +106,17 @@ const runFiltering = async () => {
   const comments_with_labels = await getLabelsForComments(comments);
   console.log(comments_with_labels);
 
+  chrome.storage.local.set({ comments_with_labels }, (_) => {
+    chrome.storage.local.get('comments_with_labels', (data) => console.log('datatatatat', data))
+  })
+
   // HIDE
   hideComments(comments_with_labels);
 };
 
-changeColor.addEventListener("click", async () => {
+let button = document.getElementById("filterComments");
+
+button.addEventListener("click", async () => {
   let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
   chrome.scripting.executeScript({
