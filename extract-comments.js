@@ -81,7 +81,13 @@ const runFiltering = async () => {
         const dataForAPI = { content: item.data.content };
         const response = apiCall(dataForAPI)
           .then((data) => {
-            return { ...item, ...data };
+            var test = Math.round(Math.random()) //FOR TESTING PURPOSES, randomizes spam/ham labels
+            if (test == 1) {
+              return { ...item, ...data };
+            } else {
+              return { ...item, label: "spam"}
+            }
+            //return { ...item, ...data };   //Original line of code
           })
           .catch((err) => {
             console.log("LABEL DATA ERROR", err);
@@ -94,17 +100,48 @@ const runFiltering = async () => {
     });
   };
 
-  const hideComments = () => {
+  const hideComments = (comments) => {
     console.log("HIDING COMMENTS");
+
+    for (const [index, object] of Object.entries(comments)) {
+      if (object.label == "spam") {
+
+        const coverNode = document.createElement("div");
+        const coverNodeStyle = {
+          position: "absolute",
+          fontSize: "50px",
+          zIndex: "1000",
+          width: "100%",
+          height: "100%",
+          textAlign: "center",
+          backgroundColor: "red",
+          color: "navy"
+        }
+        Object.assign(coverNode.style, coverNodeStyle);
+        
+        const text = document.createTextNode("SPAM");
+        
+        coverNode.appendChild(text);
+        object.element.prepend(coverNode);
+
+        object.element.style.position = "relative";
+
+        //If we want to hide comments completely
+        //object.element.style.display = 'none';
+        console.log(object.element)
+      }
+    }
+
     // Do some hiding business here
   };
 
   const comments = await extractYoutubeComments();
-  console.log(comments);
+  //console.log(comments);
 
   // GET LABELS FROM API
-  const comments_with_labels = await getLabelsForComments(comments);
-  console.log(comments_with_labels);
+  const comments_with_labels = await getLabelsForComments(comments)
+  
+  //console.log(comments_with_labels);
 
   chrome.storage.local.set({ comments_with_labels }, (_) => {
     chrome.storage.local.get('comments_with_labels', (data) => console.log('datatatatat', data))
