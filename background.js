@@ -62,31 +62,56 @@ const testScript = () => {
       return commentEntries;
     };
 
+    const API_URL = "http://localhost:5000/detect";
+
     const apiCall = (item) => {
       // Insert fetch to backend here
       // const response = fetch('http...')
+
+      console.log('ITEM:', item)
+
+      return fetch(API_URL, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(item),
+      }).then((response) => {
+        // console.log('RESPONSE:', response)
+        // console.log('BODY:', response.body)
+        // console.log('JSON:', response.json())
+        return response.json()
+      }).catch(err => {
+        console.log('ERROR RESPONSE:', err)
+        return { label: [false] }
+      });
 
       // Pass data, not response back to caller
       return Promise.resolve({ label: "ham" });
     };
 
-    const testMarkAll = false
+    const testMarkAll = false;
 
     const getLabelsForComments = (comments) => {
       console.log("FETCHING LABELS");
 
       return Promise.all(
         comments.map((item) => {
-          const dataForAPI = { content: item.data.content };
+          const dataForAPI = { content: [item.data.content] };
           const response = apiCall(dataForAPI)
             .then((data) => {
-              var test = Math.round(Math.random()); //FOR TESTING PURPOSES, randomizes spam/ham labels
-              if (test == 1 && !testMarkAll) {
-                return { ...item, ...data };
-              } else {
-                return { ...item, label: "spam" };
-              }
-              //return { ...item, ...data };   //Original line of code
+              console.log()
+              // var test = Math.round(Math.random()); //FOR TESTING PURPOSES, randomizes spam/ham labels
+              // if (test == 1 && !testMarkAll) {
+              //   return { ...item, ...data };
+              // } else {
+              //   return { ...item, label: "spam" };
+              // }
+              const singletonLabel = { label: data.label[0] }
+              console.log('PRED DATA', data)
+              console.log('SINGLE DATA', singletonLabel)
+              return { ...item, ...singletonLabel };
             })
             .catch((err) => {
               console.log("LABEL DATA ERROR", err);
@@ -103,7 +128,7 @@ const testScript = () => {
       console.log("HIDING COMMENTS");
 
       for (const [index, object] of Object.entries(comments)) {
-        if (object.label == "spam") {
+        if (object.label) {
           const coverNode = document.createElement("div");
           const coverNodeStyle = {
             position: "absolute",
@@ -174,7 +199,7 @@ const testScript = () => {
 
               // MAKE OBSERVER THAT CALLS FILTER FUNCTION
 
-              console.log('ATTACHING WAIT OBSERVER')
+              console.log("ATTACHING WAIT OBSERVER");
 
               const o2 = new MutationObserver(parseNewComment);
               o2.observe(node, { childList: true });
@@ -218,7 +243,7 @@ const testScript = () => {
       console.log("end");
     };
 
-    console.log('BEFORE ATTACH', commentsEl);
+    console.log("BEFORE ATTACH", commentsEl);
     attachObservers(commentsEl);
   };
 
@@ -230,7 +255,7 @@ const testScript = () => {
       const commentsEl = body.querySelector("#comments");
 
       if (commentsEl) {
-        console.log('ON EXISTANCE IN SET INTERVAL', commentsEl);
+        console.log("ON EXISTANCE IN SET INTERVAL", commentsEl);
         startFiltering(commentsEl);
         clearInterval(commentFetchInterval);
       }
