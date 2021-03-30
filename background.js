@@ -28,6 +28,7 @@ const testScript = () => {
   // });
   console.log(commentsEl);
 
+  const comments = []
   const obs = (muts) => {
     console.log("MUTATION HAPPENED");
     console.log('Mutations', muts);
@@ -40,13 +41,19 @@ const testScript = () => {
           const node = n.querySelector("#contents");
           console.log("Sections node", node);
           console.log("Sections node", node.childNodes);
-          const testObs = (muts) => {
-            console.log('Mutations on section node', muts);
+          const parseNewComment = (mutations) => {
+            console.log('Mutations on section node', mutations);
+
+            for (const mutation of mutations) {
+              const nodes = Array.from(mutation.addedNodes);
+              comments.push(...nodes)
+            }
+            console.log("comments: ", comments);
           };
 
           // MAKE OBSERVER THAT CALLS FILTER FUNCTION
 
-          const o2 = new MutationObserver(testObs);
+          const o2 = new MutationObserver(parseNewComment);
           o2.observe(node, { childList: true });
           break;
         }
