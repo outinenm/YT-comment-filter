@@ -2,9 +2,22 @@ const runFiltering = async () => {
   const apiCall = (item) => {
     // Insert fetch to backend here
     // const response = fetch('http...')
+    const apiUrl = "http://localhost:5000/detect";
+    
+    const request = fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(item)
+    })
+    .then((response) => {
+      return response.json
+    });
 
     // Pass data, not response back to caller
-    return Promise.resolve({ label: "ham" });
+    return Promise.resolve(request);
   };
 
   const extractYoutubeComments = () => {
