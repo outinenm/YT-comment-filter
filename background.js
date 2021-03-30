@@ -5,64 +5,218 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log("YT comment color set to %cgreen", `color: ${color}`);
 });
 
+
+
 const testScript = () => {
-  // Object.keys(window).forEach((key) => {
-  //   console.log(key)
-  //   if (/^on/.test(key)) {
-  //     window.addEventListener('animationiteration', (event) => {
-  //       console.log('The event we want')
-  //       // console.log('path',event.path)
-  //       console.log('e',event);
-  //     });
-  //     // window.addEventListener(key.slice(2), (event) => {
-  //     //   console.log(event);
-  //     // });
-  //   }
-  // });
+  const startFiltering = (commentsEl) => {
 
-  const body = document.querySelector("body");
-  console.log(body);
-  const commentsEl = body.querySelector("#comments");
-  // commentsEl.addEventListener("change", (event) => {
-  //   console.log("comment contents", event);
-  // });
-  console.log(commentsEl);
+    const extractCommentData = (commentRenderers) => {
+      const getCommentData = (item) => {
+        const mainWrapper = item.querySelector("#body > #main");
+        const author = mainWrapper
+          .querySelector("#author-text > span")
+          .textContent.trim();
+        const commentText = mainWrapper
+          .querySelector("#content > #content-text")
+          .textContent.trim();
 
-  const comments = []
-  const obs = (muts) => {
-    console.log("MUTATION HAPPENED");
-    console.log('Mutations', muts);
+        return { author: author, content: commentText };
+      };
 
-    for (const m of muts) {
-      for (const n of m.addedNodes) {
-        console.log("Sub node", n.id);
-        console.log("Sub node", n);
-        if (n.id === "sections") {
-          const node = n.querySelector("#contents");
-          console.log("Sections node", node);
-          console.log("Sections node", node.childNodes);
-          const parseNewComment = (mutations) => {
-            console.log('Mutations on section node', mutations);
+      const entryMapper = (renderer) => {
+        // GET main comment in thread
+        const comment = renderer.querySelector("#comment");
+        const commentData = comment ? getCommentData(comment) : null;
 
-            for (const mutation of mutations) {
-              const nodes = Array.from(mutation.addedNodes);
-              comments.push(...nodes)
-            }
-            console.log("comments: ", comments);
-          };
+        // GET replies
+        const repliesWrapper = renderer.querySelector("#loaded-replies");
+        let replies = null;
 
-          // MAKE OBSERVER THAT CALLS FILTER FUNCTION
+        if (repliesWrapper) {
+          const replyElements = repliesWrapper.querySelectorAll(
+            "ytd-comment-renderer"
+          );
+          replies =
+            replyElements &&
+            Array.from(replyElements, (element) => {
+              const replyData = element ? getCommentData(element) : {};
+              return {
+                data: { ...replyData },
+                element: element
+              };
+            });
+        }
 
-          const o2 = new MutationObserver(parseNewComment);
-          o2.observe(node, { childList: true });
-          break;
+        // DEBUG
+        // console.log(author);
+        // console.log(commentText);
+        // console.log(item);
+
+        return {
+          data: {
+            ...commentData,
+            replies: replies,
+          },
+          element: renderer,
+        };
+      }
+
+      const commentEntries = Array.from(commentRenderers, entryMapper);
+      return commentEntries;
+    }
+
+    const apiCall = (item) => {
+      // Insert fetch to backend here
+      // const response = fetch('http...')
+
+      // Pass data, not response back to caller
+      return Promise.resolve({ label: "ham" });
+    };
+
+    const getLabelsForComments = (comments) => {
+      console.log("FETCHING LABELS");
+
+      return Promise.all(
+        comments.map((item) => {
+          const dataForAPI = { content: item.data.content };
+          const response = apiCall(dataForAPI)
+            .then((data) => {
+              var test = Math.round(Math.random()) //FOR TESTING PURPOSES, randomizes spam/ham labels
+              if (test == 1) {
+                return { ...item, ...data };
+              } else {
+                return { ...item, label: "spam" }
+              }
+              //return { ...item, ...data };   //Original line of code
+            })
+            .catch((err) => {
+              console.log("LABEL DATA ERROR", err);
+              return { ...item, label: "unknown" };
+            });
+          return response;
+        })
+      ).catch((err) => {
+        console.log("Ooooh dammmmm", err);
+      });
+    };
+
+    const hideComments = (comments) => {
+      console.log("HIDING COMMENTS");
+
+      for (const [index, object] of Object.entries(comments)) {
+        if (object.label == "spam") {
+
+          const coverNode = document.createElement("div");
+          const coverNodeStyle = {
+            position: "absolute",
+            fontSize: "50px",
+            zIndex: "1000",
+            width: "100%",
+            height: "100%",
+            textAlign: "center",
+            backgroundColor: "red",
+            color: "navy"
+          }
+          Object.assign(coverNode.style, coverNodeStyle);
+
+          const text = document.createTextNode("SPAM");
+
+          coverNode.appendChild(text);
+          object.element.prepend(coverNode);
+
+          object.element.style.position = "relative";
+
+          //If we want to hide comments completely
+          //object.element.style.display = 'none';
+          console.log(object.element)
         }
       }
-    }
-  };
 
-  const observer = new MutationObserver(obs);
-  observer.observe(commentsEl, { childList: true });
+      // Do some hiding business here
+    };
+
+    // Object.keys(window).forEach((key) => {
+    //   console.log(key)
+    //   if (/^on/.test(key)) {
+    //     window.addEventListener('animationiteration', (event) => {
+    //       console.log('The event we want')
+    //       // console.log('path',event.path)
+    //       console.log('e',event);
+    //     });
+    //     // window.addEventListener(key.slice(2), (event) => {
+    //     //   console.log(event);
+    //     // });
+    //   }
+    // });
+
+    const attachObservers = (commentsEl) => {
+      let comments = []
+      const obs = (muts) => {
+        console.log("MUTATION HAPPENED");
+        console.log('Mutations', muts);
+
+        for (const m of muts) {
+          for (const n of m.addedNodes) {
+            console.log("Sub node", n.id);
+            console.log("Sub node", n);
+            if (n.id === "sections") {
+              const node = n.querySelector("#contents");
+              console.log("Sections node", node);
+              console.log("Sections node", node.childNodes);
+              const parseNewComment = async (mutations) => {
+                console.log('Mutations on section node', mutations);
+
+                for (const mutation of mutations) {
+                  const nodes = Array.from(mutation.addedNodes);
+                  comments.push(...nodes)
+                }
+                console.log("comments: ", comments);
+
+                if (comments.length > 5) {
+                  const commentBatch = [...comments];
+                  comments = [];
+                  const extractedComments = extractCommentData(commentBatch);
+                  console.log(extractedComments);
+
+                  // GET LABELS FROM API
+                  const comments_with_labels = await getLabelsForComments(extractedComments)
+
+                  // HIDE
+                  hideComments(comments_with_labels);
+                }
+              };
+
+              // MAKE OBSERVER THAT CALLS FILTER FUNCTION
+
+              const o2 = new MutationObserver(parseNewComment);
+              o2.observe(node, { childList: true });
+              break;
+            }
+          }
+        }
+      };
+      console.log("Haloj");
+      const observer = new MutationObserver(obs);
+      console.log("test1", observer);
+      observer.observe(commentsEl, { childList: true });
+      console.log("end");
+    }
+    console.log(commentsEl);
+    attachObservers(commentsEl);
+    
+  }
+  const body = document.querySelector("body");
+  console.log(body);
+
+  const commentFetchInterval = setInterval((() => {
+    const commentsEl = body.querySelector("#comments");
+    
+    if (commentsEl) {
+      console.log(commentsEl);
+      startFiltering(commentsEl);
+      //clearInterval(commentFetchInterval);
+    }
+  }).bind(this), 1000)
 };
 
 chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
