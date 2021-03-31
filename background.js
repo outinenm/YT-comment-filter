@@ -2,11 +2,17 @@ let color = "green";
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.sync.set({ color });
-  console.log("YT comment color set to %cgreen", `color: ${color}`);
+  debugPrint("YT comment color set to %cgreen", `color: ${color}`);
 });
 
-const testScript = () => {
-  const startFiltering = (commentsEl) => {
+const contentScript = () => {
+  const DEBUG = false;
+  const debugPrint = (...values) => {
+    if (DEBUG) {
+      debugPrint(...values);
+    }
+  };
+  const startFiltering = (elementForAttach) => {
     const extractCommentData = (commentRenderers) => {
       const getCommentData = (item) => {
         const mainWrapper = item.querySelector("#body > #main");
@@ -44,11 +50,6 @@ const testScript = () => {
             });
         }
 
-        // DEBUG
-        // console.log(author);
-        // console.log(commentText);
-        // console.log(item);
-
         return {
           data: {
             ...commentData,
@@ -64,40 +65,28 @@ const testScript = () => {
 
     const API_URL = "http://localhost:5000/detect";
 
-    const apiCall = (item) => {
-      // Insert fetch to backend here
-      // const response = fetch('http...')
-
-      //console.log('ITEM:', item)
-
-      return fetch(API_URL, {
+    const singleItemAPI = (data) => {
+      const requestOptions = {
         method: "POST",
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(item),
-      }).then((response) => {
-        return response.json()
-      }).catch(err => {
-        console.log('ERROR RESPONSE:', err)
-        return { label: [false] }
-      });
+        body: JSON.stringify(data),
+      };
 
-      // Pass data, not response back to caller
-      return Promise.resolve({ label: "ham" });
+      return fetch(API_URL, requestOptions).then((response) => response.json());
     };
 
-    const testMarkAll = false;
-
     const getLabelsForComments = (comments) => {
-      console.log("FETCHING LABELS");
+      debugPrint("FETCHING LABELS");
 
       return Promise.all(
         comments.map((item) => {
           const dataForAPI = { content: [item.data.content] };
-          const response = apiCall(dataForAPI)
+          const response = singleItemAPI(dataForAPI)
             .then((data) => {
+              // const testMarkAll = false;
               //FOR TESTING PURPOSES, randomizes spam/ham labels
               // var test = Math.round(Math.random());
               // if (test == 1 && !testMarkAll) {
@@ -105,20 +94,21 @@ const testScript = () => {
               // } else {
               //   return { ...item, label: "spam" };
               // }
-              const singletonLabel = { label: data.label[0] }
+              const singletonLabel = { label: data.label[0] };
               return { ...item, ...singletonLabel };
             })
             .catch((err) => {
-              console.log("LABEL DATA ERROR", err);
+              debugPrint("LABEL DATA ERROR", err);
               return { ...item, label: "unknown" };
             });
           return response;
         })
       ).catch((err) => {
-        console.log("Ooooh dammmmm", err);
+        debugPrint("Ooooh dammmmm", err);
       });
     };
 
+    // REWRITE WITH CSS AND className setting
     const createCoverNode = () => {
       const nodeStyleLarge = {
         position: "absolute",
@@ -148,9 +138,10 @@ const testScript = () => {
 
       const setStyle = (node, newStyle) => {
         Object.assign(node.style, newStyle);
-      }
+      };
 
       const toggleCover = (event) => {
+        debugPrint("TOGGLE");
         if (event.target.innerText === "SPAM") {
           setStyle(event.target, nodeStyleSmall);
           event.target.innerText = "Maximize";
@@ -158,121 +149,116 @@ const testScript = () => {
           setStyle(event.target, nodeStyleLarge);
           event.target.innerText = "SPAM";
         }
-      }
+      };
+
       const coverNode = document.createElement("div");
       setStyle(coverNode, nodeStyleLarge);
-      
+
       const text = document.createTextNode("SPAM");
       coverNode.appendChild(text);
 
       coverNode.addEventListener("click", toggleCover);
       return coverNode;
-    }
+    };
 
     const hideComments = (comments) => {
-      console.log("HIDING COMMENTS");
+      debugPrint("HIDING COMMENTS", comments);
 
-      for (const [index, object] of Object.entries(comments)) {
-        if (object.label) {
+      for (const comment of comments) {
+        if (comment.label) {
+          comment.element.style.position = "relative";
           const coverNode = createCoverNode();
-          object.element.prepend(coverNode);
-
-          object.element.style.position = "relative";
-
-          //If we want to hide comments completely
-          //object.element.style.display = 'none';
+          comment.element.prepend(coverNode);
         }
       }
     };
 
-    let comments = [];
+    let COMMENT_STATE = [];
 
-    const parseNewComment = async (mutations) => {
-      // console.log("Mutations on section node", mutations);
+    const processComments = async (commentElements) => {
+      const extractedComments = extractCommentData(commentElements);
+      const commentsWithLabels = await getLabelsForComments(extractedComments);
+      hideComments(commentsWithLabels);
+    };
+
+    const parseNewCommentMutations = async (mutations) => {
+      // debugPrint("Mutations on section node", mutations);
 
       for (const mutation of mutations) {
         const nodes = Array.from(mutation.addedNodes);
-        comments.push(...nodes);
+        COMMENT_STATE.push(...nodes);
       }
 
-      if (comments.length > 5) {
-        const commentBatch = [...comments];
-        comments = [];
-        const extractedComments = extractCommentData(commentBatch);
-
-        // GET LABELS FROM API
-        const comments_with_labels = await getLabelsForComments(
-          extractedComments
-        );
-
-        // HIDE
-        hideComments(comments_with_labels);
+      if (COMMENT_STATE.length > 5) {
+        const commentBatch = [...COMMENT_STATE];
+        COMMENT_STATE = [];
+        processComments(commentBatch);
       }
     };
 
-    const attachObservers = (commentsEl) => {
-      const obs = (muts) => {
-        // console.log("MUTATION HAPPENED");
-        // console.log("Mutations", muts);
+    const attachObservers = (commentSectionParent) => {
+      const observeCommentSectionParent = (mutations) => {
+        // debugPrint("MUTATION HAPPENED");
+        // debugPrint("Mutations", mutations);
 
-        for (const m of muts) {
-          for (const n of m.addedNodes) {
-            if (n.id === "sections") {
-              const node = n.querySelector("#contents");
+        for (const mutationRecord of mutations) {
+          for (const addedNode of mutationRecord.addedNodes) {
+            if (addedNode.id === "sections") {
+              const commentSectionElement = addedNode.querySelector(
+                "#contents"
+              );
 
-              console.log("ATTACHING WAIT OBSERVER");
-              
-              const o2 = new MutationObserver(parseNewComment);
-              o2.observe(node, { childList: true });
+              debugPrint("ATTACHING WAIT OBSERVER");
+
+              const observer = new MutationObserver(parseNewCommentMutations);
+              observer.observe(commentSectionElement, { childList: true });
               break;
             }
           }
         }
       };
 
-      const contents = commentsEl.querySelector("#contents");
+      // CHECK FOR EXISTENCE OF COMMENT SECTION
+      const contentsElement = commentSectionParent.querySelector("#contents");
 
-      if (contents) {
-        const commentRenderers = contents.querySelectorAll(
+      if (contentsElement) {
+        const commentRenderers = contentsElement.querySelectorAll(
           "ytd-comment-thread-renderer"
         );
+
         if (commentRenderers && commentRenderers.length > 0) {
-          console.log("WE ALREADY HAVE COMMENTS");
-          (async () => {
-            const extractedComments = extractCommentData(
-              Array.from(commentRenderers)
-            );
-            // GET LABELS FROM API
-            const comments_with_labels = await getLabelsForComments(
-              extractedComments
-            );
-
-            // HIDE
-            hideComments(comments_with_labels);
-          })();
+          debugPrint("WE ALREADY HAVE COMMENTS");
+          const commentBatch = Array.from(commentRenderers);
+          processComments(commentBatch);
         }
-        console.log("ATTACHING TO COMMENT CONTENTS WITHOUT WAITING");
-        const o3 = new MutationObserver(parseNewComment);
-        o3.observe(contents, { childList: true });
-      }
 
-      const observer = new MutationObserver(obs);
-      observer.observe(commentsEl, { childList: true });
+        debugPrint("ATTACHING TO COMMENT CONTENTS WITHOUT WAITING");
+        const observer = new MutationObserver(parseNewCommentMutations);
+        observer.observe(contentsElement, { childList: true });
+      } else {
+        // COMMENT SECTION NOT YET LOADED
+        const observer = new MutationObserver(observeCommentSectionParent);
+        observer.observe(commentSectionParent, { childList: true });
+      }
     };
 
-    console.log("BEFORE ATTACH", commentsEl);
-    attachObservers(commentsEl);
+    // START OF FILTERING SCRIPT
+
+    debugPrint("BEFORE ATTACH", elementForAttach);
+    attachObservers(elementForAttach);
   };
+
+  // START OF CONTENT SCRIPT EXECUTION
 
   const body = document.querySelector("body");
 
   const commentFetchInterval = setInterval(
     (() => {
-      const commentsEl = body.querySelector("#comments");
+      const commentsElement = body.querySelector("#comments");
 
-      if (commentsEl) {
-        console.log("ON EXISTANCE IN SET INTERVAL", commentsEl);
-        startFiltering(commentsEl);
+      if (commentsElement) {
+        debugPrint("ON EXISTANCE IN SET INTERVAL", commentsElement);
+        startFiltering(commentsElement);
         clearInterval(commentFetchInterval);
       }
     }).bind(this),
@@ -280,27 +266,33 @@ const testScript = () => {
   );
 };
 
+const DEBUG = false;
+const debugPrint = (...values) => {
+  if (DEBUG) {
+    debugPrint(...values);
+  }
+};
+
 chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
-  console.log(tabId);
-  console.log(changeInfo);
-  console.log(tab);
-  console.log(tab.url);
+  debugPrint("TAB UPDATE");
+  debugPrint("TAB", tabId);
+  debugPrint("TAB", changeInfo);
+  debugPrint("TAB", tab);
+  debugPrint("TAB", tab.url);
 
   if (changeInfo.status == "complete") {
     chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
       let url = tabs[0].url;
 
       if (url && url.includes("youtube.com/watch")) {
-        console.log("Add listener for comments", tabs[0].id);
+        debugPrint("Add listener for comments", tabs[0].id);
 
         // UNCOMMENT TO CALL EXTRACTION SCRIPT WHEN HITTING YOUTUBE WATCH PAGE
         chrome.scripting.executeScript({
           target: { tabId: tabs[0].id },
-          function: testScript,
+          function: contentScript,
         });
       }
-
-      // use `url` here inside the callback because it's asynchronous!
     });
   }
 });
