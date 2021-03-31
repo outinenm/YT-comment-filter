@@ -75,7 +75,12 @@ const contentScript = () => {
         body: JSON.stringify(data),
       };
 
-      return fetch(API_URL, requestOptions).then((response) => response.json());
+      return fetch(API_URL, requestOptions)
+        .then((response) => response.json())
+        .catch((err) => {
+          debugPrint("ERROR", err);
+          return { label: [false] };
+        });
     };
 
     const getLabelsForComments = (comments) => {
@@ -99,7 +104,7 @@ const contentScript = () => {
             })
             .catch((err) => {
               debugPrint("LABEL DATA ERROR", err);
-              return { ...item, label: "unknown" };
+              return { ...item, label: [false] };
             });
           return response;
         })
