@@ -65,7 +65,7 @@ const contentScript = () => {
 
     const API_URL = "http://localhost:5000/detect";
 
-    const singleItemAPI = (data) => {
+    const APICall = (data) => {
       const requestOptions = {
         method: "POST",
         headers: {
@@ -79,38 +79,29 @@ const contentScript = () => {
         .then((response) => response.json())
         .catch((err) => {
           debugPrint("ERROR", err);
-          return { label: [false] };
+          const allFalse = data.map((element) => {
+            return false;
+          });
+          return { label: allFalse };
         });
     };
 
     const getLabelsForComments = (comments) => {
       debugPrint("FETCHING LABELS");
 
-      return Promise.all(
-        comments.map((item) => {
-          const dataForAPI = { content: [item.data.content] };
-          const response = singleItemAPI(dataForAPI)
-            .then((data) => {
-              // const testMarkAll = false;
-              //FOR TESTING PURPOSES, randomizes spam/ham labels
-              // var test = Math.round(Math.random());
-              // if (test == 1 && !testMarkAll) {
-              //   return { ...item, ...data };
-              // } else {
-              //   return { ...item, label: "spam" };
-              // }
-              const singletonLabel = { label: data.label[0] };
-              return { ...item, ...singletonLabel };
-            })
-            .catch((err) => {
-              debugPrint("LABEL DATA ERROR", err);
-              return { ...item, label: [false] };
-            });
-          return response;
-        })
-      ).catch((err) => {
-        debugPrint("Ooooh dammmmm", err);
+      const commentStrings = comments.map((item) => {
+        return item.data.content;
       });
+      const contents = {content: commentStrings};
+
+      const response = APICall(contents).then((data) => {
+        const zipped = [];
+        for (let i=0; i < comments.length; i++) {
+          zipped[i] = {...comments[i], label: data.label[i]};
+        }
+        return zipped;
+      });
+      return response;
     };
 
     // REWRITE WITH CSS AND className setting
