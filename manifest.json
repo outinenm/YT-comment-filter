@@ -1,6 +1,6 @@
 {
   "name": "Youtube Comment Filter",
-  "description": "Colors possible spam comments in youtube comment section. Currently colors all the comments.",
+  "description": "Colors possible spam comments in youtube comment section.",
   "version": "0.1",
   "manifest_version": 3,
   "background": {

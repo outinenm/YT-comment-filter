@@ -122,21 +122,48 @@ const runFiltering = async () => {
         const coverNode = document.createElement("div");
         const coverNodeStyle = {
           position: "absolute",
-          fontSize: "50px",
+          fontSize: "35px",
           zIndex: "1000",
           width: "100%",
           height: "100%",
           textAlign: "center",
-          backgroundColor: "red",
-          color: "navy"
+          backgroundColor: "#ff4d4d",
+          color: "#ffff66",
         }
         Object.assign(coverNode.style, coverNodeStyle);
-        
         const text = document.createTextNode("SPAM");
-        
         coverNode.appendChild(text);
-        object.element.prepend(coverNode);
 
+        const showHiddenButton = document.createElement("BUTTON");
+        showHiddenButton.innerHTML = "Show hidden comment";
+        const buttonStyle = {
+          margin: "30px",
+          lineHeight: "45px",
+          fontWeight: "bold",
+          padding: "0 30px",
+          background: "lightsalmon",
+          border: "1px solid gray",
+          borderRadius: "2px"
+        }
+        Object.assign(showHiddenButton.style, buttonStyle);
+
+        showHiddenButton.addEventListener("click", () => {
+          const hiddenComment = document.createElement("SPAN");
+          hiddenComment.innerHTML = object.data.content;
+          const commentStyle = {
+            fontWeight: "normal",
+            color: "white",
+            fontSize: "15px",
+            display: "block"
+          }
+          
+          Object.assign(hiddenComment.style, commentStyle)
+          coverNode.appendChild(hiddenComment);
+          showHiddenButton.style.display = "none";
+        });
+
+        coverNode.appendChild(showHiddenButton);
+        object.element.prepend(coverNode);
         object.element.style.position = "relative";
 
         //If we want to hide comments completely
