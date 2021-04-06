@@ -105,55 +105,51 @@ const contentScript = () => {
     };
 
     // REWRITE WITH CSS AND className setting
-    const createCoverNode = () => {
-      const nodeStyleLarge = {
+    const createCoverNode = (comment) => {
+      const coverNode = document.createElement("div");
+      const coverNodeStyle = {
         position: "absolute",
-        left: 0,
-        top: 0,
-        fontSize: "50px",
+        fontSize: "35px",
         zIndex: "1000",
         width: "100%",
         height: "100%",
         textAlign: "center",
-        backgroundColor: "red",
-        color: "navy",
-      };
-
-      const nodeStyleSmall = {
-        position: "absolute",
-        left: "50%",
-        top: 0,
-        fontSize: "18px",
-        zIndex: "1000",
-        width: "100px",
-        height: "25px",
-        textAlign: "center",
-        backgroundColor: "red",
-        color: "navy",
-      };
-
-      const setStyle = (node, newStyle) => {
-        Object.assign(node.style, newStyle);
-      };
-
-      const toggleCover = (event) => {
-        debugPrint("TOGGLE");
-        if (event.target.innerText === "SPAM") {
-          setStyle(event.target, nodeStyleSmall);
-          event.target.innerText = "Maximize";
-        } else {
-          setStyle(event.target, nodeStyleLarge);
-          event.target.innerText = "SPAM";
-        }
-      };
-
-      const coverNode = document.createElement("div");
-      setStyle(coverNode, nodeStyleLarge);
-
+        backgroundColor: "#ff4d4d",
+        color: "#ffff66",
+      }
+      Object.assign(coverNode.style, coverNodeStyle);
       const text = document.createTextNode("SPAM");
       coverNode.appendChild(text);
 
-      coverNode.addEventListener("click", toggleCover);
+      const showHiddenButton = document.createElement("BUTTON");
+      showHiddenButton.innerHTML = "Show hidden comment";
+      const buttonStyle = {
+        margin: "30px",
+        lineHeight: "45px",
+        fontWeight: "bold",
+        padding: "0 30px",
+        background: "lightsalmon",
+        border: "1px solid gray",
+        borderRadius: "2px"
+      }
+      Object.assign(showHiddenButton.style, buttonStyle);
+
+      showHiddenButton.addEventListener("click", () => {
+        const hiddenComment = document.createElement("SPAN");
+        hiddenComment.innerHTML = comment.data.content;
+        const commentStyle = {
+          fontWeight: "normal",
+          color: "white",
+          fontSize: "15px",
+          display: "block"
+        }
+        
+        Object.assign(hiddenComment.style, commentStyle)
+        coverNode.appendChild(hiddenComment);
+        showHiddenButton.style.display = "none";
+      });
+
+      coverNode.appendChild(showHiddenButton);
       return coverNode;
     };
 
@@ -163,7 +159,7 @@ const contentScript = () => {
       for (const comment of comments) {
         if (comment.label) {
           comment.element.style.position = "relative";
-          const coverNode = createCoverNode();
+          const coverNode = createCoverNode(comment);
           comment.element.prepend(coverNode);
         }
       }
