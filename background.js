@@ -9,7 +9,7 @@ const contentScript = () => {
   const DEBUG = false;
   const debugPrint = (...values) => {
     if (DEBUG) {
-      debugPrint(...values);
+      console.log(...values);
     }
   };
   const startFiltering = (elementForAttach) => {
@@ -92,12 +92,15 @@ const contentScript = () => {
       const commentStrings = comments.map((item) => {
         return item.data.content;
       });
-      const contents = {content: commentStrings};
+      const contents = { content: commentStrings };
 
       const response = APICall(contents).then((data) => {
+        debugPrint('API RESPONSE', data);
+        const predictions = data && data.predictions
+
         const zipped = [];
-        for (let i=0; i < comments.length; i++) {
-          zipped[i] = {...comments[i], label: data.label[i]};
+        for (let i = 0; i < comments.length; i++) {
+          zipped[i] = { ...comments[i], ...predictions[i] };
         }
         return zipped;
       });
@@ -116,7 +119,7 @@ const contentScript = () => {
         textAlign: "center",
         backgroundColor: "#ff4d4d",
         color: "#ffff66",
-      }
+      };
       Object.assign(coverNode.style, coverNodeStyle);
       const text = document.createTextNode("SPAM");
       coverNode.appendChild(text);
@@ -130,8 +133,8 @@ const contentScript = () => {
         padding: "0 30px",
         background: "lightsalmon",
         border: "1px solid gray",
-        borderRadius: "2px"
-      }
+        borderRadius: "2px",
+      };
       Object.assign(showHiddenButton.style, buttonStyle);
 
       showHiddenButton.addEventListener("click", () => {
@@ -141,10 +144,10 @@ const contentScript = () => {
           fontWeight: "normal",
           color: "white",
           fontSize: "15px",
-          display: "block"
-        }
-        
-        Object.assign(hiddenComment.style, commentStyle)
+          display: "block",
+        };
+
+        Object.assign(hiddenComment.style, commentStyle);
         coverNode.appendChild(hiddenComment);
         showHiddenButton.style.display = "none";
       });
@@ -261,7 +264,7 @@ const contentScript = () => {
 const DEBUG = false;
 const debugPrint = (...values) => {
   if (DEBUG) {
-    debugPrint(...values);
+    console.log(...values);
   }
 };
 
