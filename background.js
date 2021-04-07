@@ -191,18 +191,6 @@ const contentScript = () => {
         };
         Object.assign(yesButton.style, yesButtonStyle);
         yesButton.innerHTML = "Correct";
-        yesButton.addEventListener("click", () => {
-          const data = {
-            items: [
-              {
-                content: comment,
-                label: true,
-                ground_truth: true,
-              },
-            ],
-          };
-          void APIfeedback(data);
-        });
 
         // Wrong button
         const noButton = document.createElement("button");
@@ -213,6 +201,9 @@ const contentScript = () => {
         };
         Object.assign(noButton.style, noButtonStyle);
         noButton.innerHTML = "Wrong";
+
+        const container = createFlexContainerWithChildren(yesButton, noButton);
+
         noButton.addEventListener("click", () => {
           const data = {
             items: [
@@ -224,10 +215,24 @@ const contentScript = () => {
             ],
           };
           void APIfeedback(data);
+          container.innerHTML = ''
         });
 
-        //
-        const container = createFlexContainerWithChildren(yesButton, noButton);
+        yesButton.addEventListener("click", () => {
+          const data = {
+            items: [
+              {
+                content: comment,
+                label: true,
+                ground_truth: true,
+              },
+            ],
+          };
+          void APIfeedback(data);
+          container.innerHTML = ''
+        });
+
+
         coverNode.appendChild(container);
       });
 
