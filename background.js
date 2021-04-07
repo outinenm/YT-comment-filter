@@ -86,6 +86,26 @@ const contentScript = () => {
         });
     };
 
+    const FEEDBACK_API_URL = "http://localhost:5000/feedback";
+
+    const APIfeedback = (data) => {
+      console.log("FEEDBACK", data);
+      const requestOptions = {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      };
+
+      return fetch(FEEDBACK_API_URL, requestOptions)
+        .then((response) => response.json())
+        .catch((err) => {
+          debugPrint("ERROR", err);
+        });
+    };
+
     const getLabelsForComments = (comments) => {
       debugPrint("FETCHING LABELS");
 
@@ -95,8 +115,8 @@ const contentScript = () => {
       const contents = { content: commentStrings };
 
       const response = APICall(contents).then((data) => {
-        debugPrint('API RESPONSE', data);
-        const predictions = data && data.predictions
+        debugPrint("API RESPONSE", data);
+        const predictions = data && data.predictions;
 
         const zipped = [];
         for (let i = 0; i < comments.length; i++) {
@@ -107,54 +127,169 @@ const contentScript = () => {
       return response;
     };
 
-    // REWRITE WITH CSS AND className setting
-    const createCoverNode = (comment) => {
+    const createFlexContainerWithChildren = (...children) => {
+      const node = document.createElement("div");
+      node.style.display = "flex";
+      // node.style.flexDirection = 'row';
+      node.style.justifyContent = "center";
+      node.style.alignItems = "stretch";
+      children.forEach((el) => {
+        node.appendChild(el);
+      });
+      console.log("HMM");
+      return node;
+    };
+
+    const createFlexCover = (comment, confidence, label = false) => {
       const coverNode = document.createElement("div");
       const coverNodeStyle = {
         position: "absolute",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
         fontSize: "35px",
         zIndex: "1000",
         width: "100%",
         height: "100%",
         textAlign: "center",
-        backgroundColor: "#ff4d4d",
-        color: "#ffff66",
+        backgroundColor: "coral",
+        color: "navy",
       };
       Object.assign(coverNode.style, coverNodeStyle);
-      const text = document.createTextNode("SPAM");
-      coverNode.appendChild(text);
 
-      const showHiddenButton = document.createElement("BUTTON");
-      showHiddenButton.innerHTML = "Show hidden comment";
+      const text = document.createTextNode("SPAM");
+      const confidenceText = document.createTextNode(
+        `Confidence: ${confidence}`
+      );
+
+      const showHiddenButton = document.createElement("button");
+      showHiddenButton.innerHTML = "Show comment";
       const buttonStyle = {
-        margin: "30px",
-        lineHeight: "45px",
         fontWeight: "bold",
         padding: "0 30px",
-        background: "lightsalmon",
-        border: "1px solid gray",
-        borderRadius: "2px",
+        margin: "0 30px 0 30px",
       };
       Object.assign(showHiddenButton.style, buttonStyle);
 
-      showHiddenButton.addEventListener("click", () => {
-        const hiddenComment = document.createElement("SPAN");
-        hiddenComment.innerHTML = comment.data.content;
-        const commentStyle = {
-          fontWeight: "normal",
-          color: "white",
-          fontSize: "15px",
-          display: "block",
-        };
+      // BUTTON TO CHANGE
 
-        Object.assign(hiddenComment.style, commentStyle);
-        coverNode.appendChild(hiddenComment);
-        showHiddenButton.style.display = "none";
+      showHiddenButton.addEventListener("click", () => {
+        coverNode.innerHTML = "";
+        const coverNodeStyle = {
+          justifyContent: "flex-end",
+          alignItems: "flex-end",
+          backgroundColor: "transparent",
+          // opacity: "0",
+        };
+        Object.assign(coverNode.style, coverNodeStyle);
+
+        // Correct button
+        const yesButton = document.createElement("button");
+        const yesButtonStyle = {
+          fontWeight: "bold",
+          padding: "15px 30px",
+        };
+        Object.assign(yesButton.style, yesButtonStyle);
+        yesButton.innerHTML = "Correct";
+        yesButton.addEventListener("click", () => {
+          const data = {
+            items: [
+              {
+                content: comment,
+                label: true,
+                ground_truth: true,
+              },
+            ],
+          };
+          void APIfeedback(data);
+        });
+
+        // Wrong button
+        const noButton = document.createElement("button");
+        const noButtonStyle = {
+          fontWeight: "bold",
+          padding: "15px 30px",
+          margin: "0 0 0 15px",
+        };
+        Object.assign(noButton.style, noButtonStyle);
+        noButton.innerHTML = "Wrong";
+        noButton.addEventListener("click", () => {
+          const data = {
+            items: [
+              {
+                content: comment,
+                label: true,
+                ground_truth: false,
+              },
+            ],
+          };
+          void APIfeedback(data);
+        });
+
+        //
+        const container = createFlexContainerWithChildren(yesButton, noButton);
+        coverNode.appendChild(container);
       });
 
-      coverNode.appendChild(showHiddenButton);
+      const container = createFlexContainerWithChildren(
+        text,
+        showHiddenButton,
+        confidenceText
+      );
+
+      console.log("HALLO");
+      coverNode.appendChild(container);
       return coverNode;
     };
+
+    // REWRITE WITH CSS AND className setting
+    // const createCoverNode = (comment) => {
+    //   const coverNode = document.createElement("div");
+    //   const coverNodeStyle = {
+    //     position: "absolute",
+    //     fontSize: "35px",
+    //     zIndex: "1000",
+    //     width: "100%",
+    //     height: "100%",
+    //     textAlign: "center",
+    //     backgroundColor: "#ff4d4d",
+    //     color: "#ffff66",
+    //   };
+    //   Object.assign(coverNode.style, coverNodeStyle);
+    //   const text = document.createTextNode("SPAM");
+    //   coverNode.appendChild(text);
+
+    //   const showHiddenButton = document.createElement("BUTTON");
+    //   showHiddenButton.innerHTML = "Show hidden comment";
+    //   const buttonStyle = {
+    //     margin: "30px",
+    //     lineHeight: "45px",
+    //     fontWeight: "bold",
+    //     padding: "0 30px",
+    //     background: "lightsalmon",
+    //     border: "1px solid gray",
+    //     borderRadius: "2px",
+    //   };
+    //   Object.assign(showHiddenButton.style, buttonStyle);
+
+    //   showHiddenButton.addEventListener("click", () => {
+    //     const hiddenComment = document.createElement("SPAN");
+    //     hiddenComment.innerHTML = comment.data.content;
+    //     const commentStyle = {
+    //       fontWeight: "normal",
+    //       color: "white",
+    //       fontSize: "15px",
+    //       display: "block",
+    //     };
+
+    //     Object.assign(hiddenComment.style, commentStyle);
+    //     coverNode.appendChild(hiddenComment);
+    //     showHiddenButton.style.display = "none";
+    //   });
+
+    //   coverNode.appendChild(showHiddenButton);
+    //   return coverNode;
+    // };
 
     const hideComments = (comments) => {
       debugPrint("HIDING COMMENTS", comments);
@@ -162,7 +297,11 @@ const contentScript = () => {
       for (const comment of comments) {
         if (comment.label) {
           comment.element.style.position = "relative";
-          const coverNode = createCoverNode(comment);
+          const coverNode = createFlexCover(
+            comment.data.content,
+            comment.confidence,
+            comment.label
+          );
           comment.element.prepend(coverNode);
         }
       }
