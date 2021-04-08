@@ -79,7 +79,7 @@ const contentScript = () => {
         .then((response) => response.json())
         .catch((err) => {
           debugPrint("ERROR", err);
-          const allFalse = data.map((element) => {
+          const allFalse = data.content.map((_) => {
             return false;
           });
           return { label: allFalse };
@@ -158,8 +158,10 @@ const contentScript = () => {
       Object.assign(coverNode.style, coverNodeStyle);
 
       const text = document.createTextNode("SPAM");
+      const conf_rounded =
+        Math.round((Number(confidence) + Number.EPSILON) * 1000) / 1000;
       const confidenceText = document.createTextNode(
-        `Confidence: ${confidence}`
+        `Confidence: ${conf_rounded}`
       );
 
       const showHiddenButton = document.createElement("button");
@@ -179,6 +181,8 @@ const contentScript = () => {
           justifyContent: "flex-end",
           alignItems: "flex-end",
           backgroundColor: "transparent",
+          right: "0",
+          width: "50%",
           // opacity: "0",
         };
         Object.assign(coverNode.style, coverNodeStyle);
@@ -187,7 +191,7 @@ const contentScript = () => {
         const yesButton = document.createElement("button");
         const yesButtonStyle = {
           fontWeight: "bold",
-          padding: "15px 30px",
+          padding: "5px 30px",
         };
         Object.assign(yesButton.style, yesButtonStyle);
         yesButton.innerHTML = "Correct";
@@ -196,7 +200,7 @@ const contentScript = () => {
         const noButton = document.createElement("button");
         const noButtonStyle = {
           fontWeight: "bold",
-          padding: "15px 30px",
+          padding: "5px 30px",
           margin: "0 0 0 15px",
         };
         Object.assign(noButton.style, noButtonStyle);
@@ -215,7 +219,7 @@ const contentScript = () => {
             ],
           };
           void APIfeedback(data);
-          container.innerHTML = ''
+          container.innerHTML = "";
         });
 
         yesButton.addEventListener("click", () => {
@@ -229,9 +233,8 @@ const contentScript = () => {
             ],
           };
           void APIfeedback(data);
-          container.innerHTML = ''
+          container.innerHTML = "";
         });
-
 
         coverNode.appendChild(container);
       });
@@ -246,55 +249,6 @@ const contentScript = () => {
       coverNode.appendChild(container);
       return coverNode;
     };
-
-    // REWRITE WITH CSS AND className setting
-    // const createCoverNode = (comment) => {
-    //   const coverNode = document.createElement("div");
-    //   const coverNodeStyle = {
-    //     position: "absolute",
-    //     fontSize: "35px",
-    //     zIndex: "1000",
-    //     width: "100%",
-    //     height: "100%",
-    //     textAlign: "center",
-    //     backgroundColor: "#ff4d4d",
-    //     color: "#ffff66",
-    //   };
-    //   Object.assign(coverNode.style, coverNodeStyle);
-    //   const text = document.createTextNode("SPAM");
-    //   coverNode.appendChild(text);
-
-    //   const showHiddenButton = document.createElement("BUTTON");
-    //   showHiddenButton.innerHTML = "Show hidden comment";
-    //   const buttonStyle = {
-    //     margin: "30px",
-    //     lineHeight: "45px",
-    //     fontWeight: "bold",
-    //     padding: "0 30px",
-    //     background: "lightsalmon",
-    //     border: "1px solid gray",
-    //     borderRadius: "2px",
-    //   };
-    //   Object.assign(showHiddenButton.style, buttonStyle);
-
-    //   showHiddenButton.addEventListener("click", () => {
-    //     const hiddenComment = document.createElement("SPAN");
-    //     hiddenComment.innerHTML = comment.data.content;
-    //     const commentStyle = {
-    //       fontWeight: "normal",
-    //       color: "white",
-    //       fontSize: "15px",
-    //       display: "block",
-    //     };
-
-    //     Object.assign(hiddenComment.style, commentStyle);
-    //     coverNode.appendChild(hiddenComment);
-    //     showHiddenButton.style.display = "none";
-    //   });
-
-    //   coverNode.appendChild(showHiddenButton);
-    //   return coverNode;
-    // };
 
     const hideComments = (comments) => {
       debugPrint("HIDING COMMENTS", comments);
