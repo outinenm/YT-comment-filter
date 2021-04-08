@@ -80,9 +80,9 @@ const contentScript = () => {
         .catch((err) => {
           debugPrint("ERROR", err);
           const allFalse = data.content.map((_) => {
-            return false;
+            return { label: false };
           });
-          return { label: allFalse };
+          return { predictions: allFalse };
         });
     };
 
@@ -116,7 +116,6 @@ const contentScript = () => {
       const response = APICall(contents).then((data) => {
         debugPrint("API RESPONSE", data);
         const predictions = data && data.predictions;
-
         const zipped = [];
         for (let i = 0; i < comments.length; i++) {
           zipped[i] = { ...comments[i], ...predictions[i] };
@@ -268,33 +267,48 @@ const contentScript = () => {
           alignItems: "flex-end",
           backgroundColor: "transparent",
           right: "0",
+          bottom: "0",
           width: "50%",
-          // opacity: "0",
+          height: "50%",
         };
         Object.assign(coverNode.style, coverNodeStyle);
 
         // Correct button
-        const yesButton = document.createElement("button");
-        const yesButtonStyle = {
-          fontWeight: "bold",
-          padding: "5px 30px",
-        };
-        Object.assign(yesButton.style, yesButtonStyle);
-        yesButton.innerHTML = "Correct";
-
-        // Wrong button
-        const noButton = document.createElement("button");
-        const noButtonStyle = {
+        const spamButton = document.createElement("button");
+        spamButton.className = "activeLabelButton";
+        const spamButtonStyle = {
           fontWeight: "bold",
           padding: "5px 30px",
           margin: "0 0 0 15px",
+          borderRadius: "0px",
+          border: "none",
         };
-        Object.assign(noButton.style, noButtonStyle);
-        noButton.innerHTML = "Wrong";
+        Object.assign(spamButton.style, spamButtonStyle);
+        spamButton.innerHTML = "SPAM";
 
-        const container = createFlexContainerWithChildren(yesButton, noButton);
+        // Wrong button
+        const hamButton = document.createElement("button");
+        hamButton.className = "activeLabelButton";
+        const hamButtonStyle = {
+          fontWeight: "bold",
+          padding: "5px 30px",
+          margin: "0 0 0 15px",
+          borderRadius: "0px",
+          border: "none",
+        };
+        Object.assign(hamButton.style, hamButtonStyle);
+        hamButton.innerHTML = "HAM";
 
-        yesButton.addEventListener("click", () => {
+        const container = createFlexContainerWithChildren(hamButton, spamButton);
+
+        const disableButtons = () => {
+          hamButton.disabled = true;
+          hamButton.className = "disabledLabelButton";
+          spamButton.disabled = true;
+          spamButton.className = "disabledLabelButton";
+        };
+
+        spamButton.addEventListener("click", () => {
           const data = {
             items: [
               {
@@ -305,10 +319,13 @@ const contentScript = () => {
             ],
           };
           void APIfeedback(data);
-          container.innerHTML = "";
+          // container.innerHTML = "";
+          spamButton.style.backgroundColor = "red";
+          spamButton.style.color = "white";
+          disableButtons();
         });
 
-        noButton.addEventListener("click", () => {
+        hamButton.addEventListener("click", () => {
           const data = {
             items: [
               {
@@ -319,7 +336,10 @@ const contentScript = () => {
             ],
           };
           void APIfeedback(data);
-          container.innerHTML = "";
+          // container.innerHTML = "";
+          hamButton.style.backgroundColor = "green";
+          hamButton.style.color = "white";
+          disableButtons();
         });
 
         coverNode.appendChild(container);
