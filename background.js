@@ -137,6 +137,14 @@ const contentScript = () => {
       return node;
     };
 
+    const createFlexContainer = (justify = "center", align = "center") => {
+      const node = document.createElement("div");
+      node.style.display = "flex";
+      node.style.justifyContent = justify;
+      node.style.alignItems = align;
+      return node;
+    };
+
     const createLabelingCover = (comment) => {
       const coverNode = document.createElement("div");
       const coverNodeStyle = {
@@ -251,10 +259,13 @@ const contentScript = () => {
 
       const showHiddenButton = document.createElement("button");
       showHiddenButton.innerHTML = "Show comment";
+      showHiddenButton.className = "activeLabelButton";
       const buttonStyle = {
         fontWeight: "bold",
-        padding: "0 30px",
-        margin: "0 30px 0 30px",
+        padding: "5px 30px",
+        margin: "0 0 0 15px",
+        borderRadius: "0px",
+        border: "none",
       };
       Object.assign(showHiddenButton.style, buttonStyle);
 
@@ -299,7 +310,10 @@ const contentScript = () => {
         Object.assign(hamButton.style, hamButtonStyle);
         hamButton.innerHTML = "HAM";
 
-        const container = createFlexContainerWithChildren(hamButton, spamButton);
+        const container = createFlexContainerWithChildren(
+          hamButton,
+          spamButton
+        );
 
         const disableButtons = () => {
           hamButton.disabled = true;
@@ -345,13 +359,31 @@ const contentScript = () => {
         coverNode.appendChild(container);
       });
 
-      const container = createFlexContainerWithChildren(
-        text,
-        showHiddenButton,
-        confidenceText
-      );
+      const rowWrapper = createFlexContainer("space-between", "center");
+      rowWrapper.style.width = "100%";
+      rowWrapper.style.padding = "0 30px 0 30px";
+      
+      // WRAP TEXT IN CONTAINER
+      const textWrapper = createFlexContainer("flex-start", "center");
+      
+      const spamText = document.createElement("span");
+      spamText.style.marginRight = "30px";
+      spamText.appendChild(text)
 
-      coverNode.appendChild(container);
+      textWrapper.appendChild(spamText);
+      textWrapper.appendChild(confidenceText);
+
+      // WRAP TEXT CONTENT AND BUTTON INTO ROW
+      rowWrapper.appendChild(textWrapper);
+      rowWrapper.appendChild(showHiddenButton);
+
+      // const container2 = createFlexContainerWithChildren(
+      //   text,
+      //   showHiddenButton,
+      //   confidenceText
+      // );
+
+      coverNode.appendChild(rowWrapper);
       return coverNode;
     };
 
