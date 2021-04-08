@@ -89,7 +89,6 @@ const contentScript = () => {
     const FEEDBACK_API_URL = "http://localhost:5000/feedback";
 
     const APIfeedback = (data) => {
-      console.log("FEEDBACK", data);
       const requestOptions = {
         method: "POST",
         headers: {
@@ -136,11 +135,98 @@ const contentScript = () => {
       children.forEach((el) => {
         node.appendChild(el);
       });
-      console.log("HMM");
       return node;
     };
 
-    const createFlexCover = (comment, confidence, label = false) => {
+    const createLabelingCover = (comment) => {
+      const coverNode = document.createElement("div");
+      const coverNodeStyle = {
+        position: "absolute",
+        display: "flex",
+        zIndex: "1000",
+        textAlign: "center",
+        justifyContent: "flex-end",
+        alignItems: "flex-end",
+        backgroundColor: "transparent",
+        right: "0",
+        bottom: "0",
+        width: "50%",
+        height: "50%",
+      };
+      Object.assign(coverNode.style, coverNodeStyle);
+
+      // Correct button
+      const spamButton = document.createElement("button");
+      spamButton.className = "activeLabelButton";
+      const spamButtonStyle = {
+        fontWeight: "bold",
+        padding: "5px 30px",
+        margin: "0 0 0 15px",
+        borderRadius: "0px",
+        border: "none",
+      };
+      Object.assign(spamButton.style, spamButtonStyle);
+      spamButton.innerHTML = "SPAM";
+
+      // Wrong button
+      const hamButton = document.createElement("button");
+      hamButton.className = "activeLabelButton";
+      const hamButtonStyle = {
+        fontWeight: "bold",
+        padding: "5px 30px",
+        margin: "0 0 0 15px",
+        borderRadius: "0px",
+        border: "none",
+      };
+      Object.assign(hamButton.style, hamButtonStyle);
+      hamButton.innerHTML = "HAM";
+
+      const container = createFlexContainerWithChildren(hamButton, spamButton);
+
+      const disableButtons = () => {
+        spamButton.disabled = true;
+        spamButton.className = "disabledLabelButton";
+        hamButton.disabled = true;
+        hamButton.className = "disabledLabelButton";
+      };
+
+      spamButton.addEventListener("click", () => {
+        const data = {
+          items: [
+            {
+              content: comment,
+              label: false, // default for unknown comment
+              ground_truth: true, // true means SPAM
+            },
+          ],
+        };
+        void APIfeedback(data);
+        spamButton.style.backgroundColor = "red";
+        spamButton.style.color = "white";
+        disableButtons();
+      });
+
+      hamButton.addEventListener("click", () => {
+        const data = {
+          items: [
+            {
+              content: comment,
+              label: false, // default for unknown comment
+              ground_truth: false, // true means SPAM
+            },
+          ],
+        };
+        void APIfeedback(data);
+        hamButton.style.backgroundColor = "green";
+        hamButton.style.color = "white";
+        disableButtons();
+      });
+
+      coverNode.appendChild(container);
+      return coverNode;
+    };
+
+    const createHidingCover = (comment, confidence, label = false) => {
       const coverNode = document.createElement("div");
       const coverNodeStyle = {
         position: "absolute",
@@ -208,20 +294,6 @@ const contentScript = () => {
 
         const container = createFlexContainerWithChildren(yesButton, noButton);
 
-        noButton.addEventListener("click", () => {
-          const data = {
-            items: [
-              {
-                content: comment,
-                label: true,
-                ground_truth: false,
-              },
-            ],
-          };
-          void APIfeedback(data);
-          container.innerHTML = "";
-        });
-
         yesButton.addEventListener("click", () => {
           const data = {
             items: [
@@ -229,6 +301,20 @@ const contentScript = () => {
                 content: comment,
                 label: true,
                 ground_truth: true,
+              },
+            ],
+          };
+          void APIfeedback(data);
+          container.innerHTML = "";
+        });
+
+        noButton.addEventListener("click", () => {
+          const data = {
+            items: [
+              {
+                content: comment,
+                label: true,
+                ground_truth: false,
               },
             ],
           };
@@ -245,7 +331,6 @@ const contentScript = () => {
         confidenceText
       );
 
-      console.log("HALLO");
       coverNode.appendChild(container);
       return coverNode;
     };
@@ -256,7 +341,7 @@ const contentScript = () => {
       for (const comment of comments) {
         if (comment.label) {
           comment.element.style.position = "relative";
-          const coverNode = createFlexCover(
+          const coverNode = createHidingCover(
             comment.data.content,
             comment.confidence,
             comment.label
@@ -266,12 +351,30 @@ const contentScript = () => {
       }
     };
 
+    const addLabelingTool = (comments) => {
+      debugPrint("ADDING LABELING TOOL", comments);
+
+      for (const comment of comments) {
+        comment.element.style.position = "relative";
+        const coverNode = createLabelingCover(comment.data.content);
+        comment.element.prepend(coverNode);
+      }
+    };
+
     let COMMENT_STATE = [];
+
+    const LABELING_MODE_ON = false;
 
     const processComments = async (commentElements) => {
       const extractedComments = extractCommentData(commentElements);
-      const commentsWithLabels = await getLabelsForComments(extractedComments);
-      hideComments(commentsWithLabels);
+      if (!LABELING_MODE_ON) {
+        const commentsWithLabels = await getLabelsForComments(
+          extractedComments
+        );
+        hideComments(commentsWithLabels);
+      } else {
+        addLabelingTool(extractedComments);
+      }
     };
 
     const parseNewCommentMutations = async (mutations) => {
@@ -333,6 +436,17 @@ const contentScript = () => {
         const observer = new MutationObserver(observeCommentSectionParent);
         observer.observe(commentSectionParent, { childList: true });
       }
+
+      const css = ".activeLabelButton:hover{ background-color: gray }";
+      const style = document.createElement("style");
+
+      if (style.styleSheet) {
+        style.styleSheet.cssText = css;
+      } else {
+        style.appendChild(document.createTextNode(css));
+      }
+
+      document.getElementsByTagName("head")[0].appendChild(style);
     };
 
     // START OF FILTERING SCRIPT
