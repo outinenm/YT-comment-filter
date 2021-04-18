@@ -1,10 +1,3 @@
-let color = "green";
-
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.sync.set({ color });
-  debugPrint("YT comment color set to %cgreen", `color: ${color}`);
-});
-
 const contentScript = () => {
   const DEBUG = false;
   const debugPrint = (...values) => {

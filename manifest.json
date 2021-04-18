@@ -1,15 +1,11 @@
 {
   "name": "Youtube Comment Filter",
-  "description": "Colors possible spam comments in youtube comment section.",
+  "description": "Highlights possible spam comments in youtube comment section.",
   "version": "0.1",
   "manifest_version": 3,
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": ["storage", "activeTab", "scripting", "tabs"],
-  "host_permissions": ["*://*.youtube.com/watch*"],
-  "options_page": "options.html",
-  "action": {
-    "default_popup": "popup-ui.html"
-  }
+  "permissions": ["scripting", "tabs"],
+  "host_permissions": ["*://*.youtube.com/watch*"]
 }
