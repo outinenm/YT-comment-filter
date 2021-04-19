@@ -20,7 +20,7 @@ Troubleshooting:
 - Comments are not filtered?
   - Start backend.
   - Reload extension (Reload icon, bottom right corner of the extension card element in the image above)
-  -
+  - Quit and reopen browser
 
 <img src="images/extension-install.png">
 
